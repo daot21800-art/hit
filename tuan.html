@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chef - Gợi Ý Món Ngon</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- React & Babel -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body { font-family: 'Be Vietnam Pro', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Icons Component Helper
+        const Icon = ({ name, size = 18, className = "" }) => {
+            useEffect(() => {
+                if (window.lucide) {
+                    window.lucide.createIcons();
+                }
+            }, [name]);
+            return <i data-lucide={name} style={{ width: size, height: size }} className={className}></i>;
+        };
+
+        const FOOD_DATABASE = [
+            { id: 1, name: 'Phở Bò Truyền Thống', category: 'Món Mặn', image: 'https://images.unsplash.com/photo-1582878826629-29b7ad1cb438?auto=format&fit=crop&q=80&w=1000', keyword: 'pho', description: 'Bát phở nóng hổi với nước dùng thanh ngọt, thịt bò mềm và bánh phở dai ngon.', time: 'Sáng - Trưa - Tối', ingredients: ['thịt bò', 'bánh phở', 'hành lá', 'gừng', 'xương'] },
+            { id: 2, name: 'Cơm Tấm Sườn Nướng', category: 'Món Mặn', image: 'https://images.unsplash.com/photo-1625944230945-174404f9224c?auto=format&fit=crop&q=80&w=1000', keyword: 'broken rice', description: 'Cơm tấm dẻo thơm, sườn nướng mỡ hành đậm đà ăn kèm đồ chua giòn rụm.', time: 'Trưa - Tối', ingredients: ['cơm tấm', 'cơm', 'sườn', 'thịt heo', 'trứng', 'chả'] },
+            { id: 3, name: 'Bún Chả Hà Nội', category: 'Món Mặn', image: 'https://images.unsplash.com/photo-1564834724105-918b73d1b9e0?auto=format&fit=crop&q=80&w=1000', keyword: 'bun cha', description: 'Thịt xiên nướng than hoa, chả băm thơm lừng cùng nước mắm chua ngọt hài hòa.', time: 'Trưa - Tối', ingredients: ['bún', 'thịt heo', 'thịt băm', 'nước mắm', 'đu đủ', 'cà rốt'] },
+            { id: 4, name: 'Salad Bơ & Đậu Hũ non', category: 'Món Chay', image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&q=80&w=1000', keyword: 'salad', description: 'Món chay thanh đạm, giàu dinh dưỡng với xốt dầu mè rang béo ngậy.', time: 'Trưa - Tối', ingredients: ['bơ', 'đậu hũ', 'đậu phụ', 'xà lách', 'cà chua', 'dầu mè'] },
+            { id: 5, name: 'Lẩu Nấm Thập Cẩm Chay', category: 'Món Chay', image: 'https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&q=80&w=1000', keyword: 'hotpot', description: 'Nước lẩu ngọt thanh từ rau củ, ăn kèm hàng chục loại nấm tươi ngon bổ dưỡng.', time: 'Tối', ingredients: ['nấm', 'rau', 'đậu hũ', 'cà rốt', 'củ cải'] },
+            { id: 6, name: 'Bánh Mì Thịt Nướng', category: 'Món Mặn', image: 'https://images.unsplash.com/photo-1509722747041-619f3836996a?auto=format&fit=crop&q=80&w=1000', keyword: 'banh mi', description: 'Ổ bánh mì giòn rụm, đầy ắp thịt nướng, pate và rau mùi thơm phức.', time: 'Sáng - Chiều', ingredients: ['bánh mì', 'thịt heo', 'pate', 'dưa leo', 'rau mùi'] },
+            { id: 7, name: 'Bánh Tiramisu Ý', category: 'Bánh & Tráng miệng', image: 'https://images.unsplash.com/photo-1571115177098-24ec42ed204d?auto=format&fit=crop&q=80&w=1000', keyword: 'tiramisu', description: 'Bánh ngọt mềm mịn, thoang thoảng vị cà phê và phô mai mascarpone quyến rũ.', time: 'Tráng miệng', ingredients: ['cà phê', 'phô mai', 'trứng', 'bột mì', 'ca cao'] },
+            { id: 8, name: 'Bánh Flan Caramel', category: 'Bánh & Tráng miệng', image: 'https://images.unsplash.com/photo-1582231222777-27b59e3dd2e3?auto=format&fit=crop&q=80&w=1000', keyword: 'flan', description: 'Bánh flan trứng sữa béo ngậy, phủ lớp caramel óng ánh, thêm chút đá mát lạnh.', time: 'Tráng miệng', ingredients: ['trứng', 'sữa', 'đường', 'caramel'] },
+            { id: 9, name: 'Trà Đào Cam Sả', category: 'Đồ uống', image: 'https://images.unsplash.com/photo-1499638673689-79a0b5115d87?auto=format&fit=crop&q=80&w=1000', keyword: 'tea', description: 'Thức uống giải nhiệt sảng khoái, đậm vị trà thơm mùi sả và đào miếng giòn ngọt.', time: 'Mọi lúc', ingredients: ['trà', 'đào', 'sả', 'cam', 'đường'] },
+            { id: 10, name: 'Cà Phê Sữa Đá', category: 'Đồ uống', image: 'https://images.unsplash.com/photo-1541167760496-162955ed8a9f?auto=format&fit=crop&q=80&w=1000', keyword: 'coffee', description: 'Cà phê phin đậm đà pha cùng sữa đặc, món uống "quốc dân" buổi sáng.', time: 'Sáng', ingredients: ['cà phê', 'sữa đặc', 'đá'] }
+        ];
+
+        const CATEGORIES = [
+            { name: 'Tất cả', icon: 'utensils' },
+            { name: 'Món Mặn', icon: 'chef-hat' },
+            { name: 'Món Chay', icon: 'leaf' },
+            { name: 'Bánh & Tráng miệng', icon: 'cake-slice' },
+            { name: 'Đồ uống', icon: 'coffee' },
+        ];
+
+        function App() {
+            const [activeCategory, setActiveCategory] = useState('Tất cả');
+            const [isThinking, setIsThinking] = useState(false);
+            const [suggestedFood, setSuggestedFood] = useState(null);
+            const [searchQuery, setSearchQuery] = useState('');
+            const [ingredientQuery, setIngredientQuery] = useState('');
+            const [isThinkingIngredient, setIsThinkingIngredient] = useState(false);
+
+            const filteredFoods = FOOD_DATABASE.filter(food => {
+                const matchCategory = activeCategory === 'Tất cả' || food.category === activeCategory;
+                const matchSearch = food.name.toLowerCase().includes(searchQuery.toLowerCase());
+                return matchCategory && matchSearch;
+            });
+
+            const handleAISuggestion = () => {
+                const availableFoods = activeCategory === 'Tất cả' ? FOOD_DATABASE : FOOD_DATABASE.filter(f => f.category === activeCategory);
+                if (availableFoods.length === 0) return;
+                setIsThinking(true);
+                setSuggestedFood(null);
+                setTimeout(() => {
+                    setSuggestedFood(availableFoods[Math.floor(Math.random() * availableFoods.length)]);
+                    setIsThinking(false);
+                }, 800);
+            };
+
+            const handleIngredientSuggestion = () => {
+                if (!ingredientQuery.trim()) return;
+                setIsThinkingIngredient(true);
+                setTimeout(() => {
+                    const userIng = ingredientQuery.toLowerCase().split(',').map(i => i.trim()).filter(i => i);
+                    const matches = FOOD_DATABASE.filter(f => f.ingredients.some(ing => userIng.some(ui => ing.includes(ui))));
+                    if (matches.length > 0) setSuggestedFood(matches[Math.floor(Math.random() * matches.length)]);
+                    setIsThinkingIngredient(false);
+                }, 800);
+            };
+
+            return (
+                <div className="min-h-screen pb-20">
+                    {/* Header */}
+                    <nav className="bg-white/90 backdrop-blur-md border-b sticky top-0 z-30">
+                        <div className="max-w-5xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-orange-500 p-2 rounded-2xl text-white">
+                                    <Icon name="chef-hat" size={24} />
+                                </div>
+                                <div>
+                                    <h1 className="text-xl font-bold text-slate-900">AI Chef</h1>
+                                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Gợi ý món ngon</p>
+                                </div>
+                            </div>
+                            <div className="relative w-full md:w-80">
+                                <Icon name="search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                <input 
+                                    type="text" 
+                                    placeholder="Tìm món ăn..." 
+                                    className="w-full pl-10 pr-4 py-2 bg-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 transition-all"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
+                        </div>
+                    </nav>
+
+                    <main className="max-w-5xl mx-auto px-4 mt-8">
+                        {/* Interaction Cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+                            <div className="bg-white p-6 rounded-[2rem] border border-slate-200">
+                                <h2 className="font-bold text-xl mb-2">Hôm nay ăn gì?</h2>
+                                <p className="text-slate-500 text-sm mb-6">Để AI chọn ngẫu nhiên món ngon cho bạn.</p>
+                                <button onClick={handleAISuggestion} disabled={isThinking} className="w-full bg-slate-900 hover:bg-orange-500 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50">
+                                    {isThinking ? <Icon name="refresh-cw" className="animate-spin" /> : <Icon name="sparkles" />}
+                                    {isThinking ? 'Đang phân tích...' : 'Gợi ý ngay'}
+                                </button>
+                            </div>
+
+                            <div className="bg-slate-900 p-6 rounded-[2rem] text-white">
+                                <h2 className="font-bold text-xl mb-2 text-orange-400">Tủ lạnh còn gì?</h2>
+                                <p className="text-slate-400 text-sm mb-4">Nhập nguyên liệu bạn đang có.</p>
+                                <div className="flex gap-2">
+                                    <input 
+                                        type="text" 
+                                        placeholder="Thịt bò, rau..." 
+                                        className="flex-grow bg-white/10 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+                                        value={ingredientQuery}
+                                        onChange={(e) => setIngredientQuery(e.target.value)}
+                                    />
+                                    <button onClick={handleIngredientSuggestion} disabled={isThinkingIngredient} className="bg-orange-500 p-3 rounded-xl hover:bg-orange-400 transition-all">
+                                        {isThinkingIngredient ? <Icon name="refresh-cw" className="animate-spin" /> : <Icon name="cooking-pot" />}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Filter Tabs */}
+                        <div className="flex gap-3 overflow-x-auto pb-6 no-scrollbar">
+                            {CATEGORIES.map(cat => (
+                                <button
+                                    key={cat.name}
+                                    onClick={() => setActiveCategory(cat.name)}
+                                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl whitespace-nowrap font-bold text-sm transition-all ${
+                                        activeCategory === cat.name ? 'bg-orange-500 text-white shadow-lg' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
+                                    }`}
+                                >
+                                    <Icon name={cat.icon} size={16} /> {cat.name}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* List Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {filteredFoods.map(food => (
+                                <div key={food.id} className="bg-white rounded-[1.5rem] overflow-hidden border border-slate-100 hover:shadow-xl transition-all group">
+                                    <div className="h-48 overflow-hidden">
+                                        <img src={food.image} alt={food.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                    </div>
+                                    <div className="p-5">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-[10px] font-bold text-orange-500 uppercase bg-orange-50 px-2 py-0.5 rounded-md">{food.category}</span>
+                                            <span className="text-[10px] text-slate-400">{food.time}</span>
+                                        </div>
+                                        <h3 className="font-bold text-lg text-slate-900 mb-2">{food.name}</h3>
+                                        <p className="text-slate-500 text-xs line-clamp-2 leading-relaxed">{food.description}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </main>
+
+                    {/* Result Modal */}
+                    {suggestedFood && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setSuggestedFood(null)}></div>
+                            <div className="bg-white w-full max-w-md rounded-[2.5rem] overflow-hidden shadow-2xl relative z-10 animate-in zoom-in-95 duration-300">
+                                <div className="h-56 relative">
+                                    <img src={suggestedFood.image} className="w-full h-full object-cover" />
+                                    <button onClick={() => setSuggestedFood(null)} className="absolute top-4 right-4 bg-black/20 text-white p-2 rounded-full backdrop-blur-md">
+                                        <Icon name="x" size={20} />
+                                    </button>
+                                </div>
+                                <div className="p-8 text-center">
+                                    <span className="text-orange-500 text-[10px] font-bold uppercase tracking-widest mb-2 block">AI Gợi Ý</span>
+                                    <h3 className="text-2xl font-bold text-slate-900 mb-3">{suggestedFood.name}</h3>
+                                    <p className="text-slate-500 text-sm mb-8">"{suggestedFood.description}"</p>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <button onClick={() => setSuggestedFood(null)} className="py-3 bg-slate-100 rounded-xl font-bold text-slate-600">Đóng</button>
+                                        <button onClick={handleAISuggestion} className="py-3 bg-orange-500 text-white rounded-xl font-bold shadow-lg shadow-orange-100 flex items-center justify-center gap-2">
+                                            <Icon name="refresh-cw" size={16} /> Đổi món
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
